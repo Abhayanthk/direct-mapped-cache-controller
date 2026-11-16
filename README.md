@@ -8,7 +8,7 @@
 
 <br>
 
-[Overview](#overview) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Operation](#operation) &nbsp;·&nbsp; [Modules](#modules) &nbsp;·&nbsp; [Verification](#verification) &nbsp;·&nbsp; [Hit/miss analysis](#hitmiss-analysis) &nbsp;·&nbsp; [Synthesis](#synthesis) &nbsp;·&nbsp; [Demo](#demo) &nbsp;·&nbsp; [Getting started](#getting-started) &nbsp;·&nbsp; [Team](#team)
+[Overview](#overview) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Operation](#operation) &nbsp;·&nbsp; [Modules](#modules) &nbsp;·&nbsp; [Verification](#verification) &nbsp;·&nbsp; [Hit/miss analysis](#hitmiss-analysis) &nbsp;·&nbsp; [Synthesis](#synthesis) &nbsp;·&nbsp; [Demo](#demo) &nbsp;·&nbsp; [Video](https://drive.google.com/drive/folders/1cAgpLGc0a6jVRFi5BkJcIOX9G1jo16D8) &nbsp;·&nbsp; [Getting started](#getting-started) &nbsp;·&nbsp; [Team](#team)
 
 </div>
 
@@ -17,6 +17,8 @@
 ## Overview
 
 This project implements a direct-mapped cache controller in Verilog (Project 6, Modern Computer Architecture). An 8-line cache with 4-word (16-byte) blocks sits between a CPU testbench and a slow main-memory model. The address is split into tag, index and offset, a tag comparator decides hit or miss, and a controller state machine serves hits and moves whole blocks on misses. Hardware counters record hits, misses and memory traffic. Sequential, repeated, random and conflicting access traces measure the hit rate, miss rate and AMAT, and the design is synthesized for a Lattice iCE40 FPGA. Writes use a write-back policy, with a write-through mode selected by an input signal for comparison.
+
+**Video explanation:** [watch the project walkthrough](https://drive.google.com/drive/folders/1cAgpLGc0a6jVRFi5BkJcIOX9G1jo16D8) (Google Drive).
 
 | Policy | Write hit | Main memory updated |
 | --- | --- | --- |
@@ -50,6 +52,10 @@ flowchart TD
     CTRL -->|"cpu_ready"| OUT["cpu_rdata, cpu_ready"]
 ```
 
+### Memory and cache layout
+
+![Main memory and cache: both are cut into blocks of 4 words; block 5 and block 13 share line 5](docs/diagrams/memory-and-cache.png)
+
 ### Parameters
 
 | Parameter | Value |
@@ -63,7 +69,9 @@ flowchart TD
 | Write policy | write-back; write-through when `write_through` = 1 |
 | Write miss | write-allocate |
 
-Example: address 21 (`000 101 01`) is word 1 of the block in line 5, with tag 0. Addresses 20 to 23 share that block.
+### Address split
+
+![Address 21 split into tag 0, index 5 and offset 1](docs/diagrams/address-split.png)
 
 ### Datapath multiplexers
 
@@ -74,6 +82,12 @@ Example: address 21 (`000 101 01`) is word 1 of the block in line 5, with tag 0.
 | Memory address | `mem_we ? {stored_tag, index, word_sel} : {addr_tag, index, word_sel}` | write-back or read, one word at a time |
 
 ## Operation
+
+### Request flow
+
+![What happens on every request: hit 1 cycle, clean miss 22 cycles, dirty miss 42 cycles](docs/diagrams/request-flow.png)
+
+### Controller FSM
 
 ![Controller FSM](docs/diagrams/fsm.png)
 
@@ -251,7 +265,7 @@ scripts/
   demo.sh        readable demo
   demo/          demo script and its testbench
 docs/
-  diagrams/      FSM diagram (fsm.svg source, fsm.png)
+  diagrams/      FSM diagram (fsm.svg source, fsm.png), memory and cache layout, address split, request flow
   results/       waveforms, hit/miss report, synthesis, traffic comparison
 ```
 
