@@ -1,0 +1,28 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  box/.style={draw, rounded corners=2pt, align=center, minimum height=8mm, inner sep=2.5pt, fill=white},
+  arr/.style={-{Stealth[length=1.8mm]}, semithick},
+  darr/.style={{Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}, semithick}]
+\node[box] (cpu)   at (0, 0)      {CPU testbench\\\texttt{cpu\_req, cpu\_we, cpu\_addr}};
+\node[box] (split) at (0, -1.25)  {\texttt{addr\_split}\\tag $|$ index $|$ offset};
+\node[box] (rams)  at (-2.45, -2.7) {Storage RAMs\\data, tag, valid, dirty\\8 lines $\times$ 4 words};
+\node[box] (cmp)   at (2.45, -2.7)  {\texttt{tag\_comparator}\\hit = valid $\wedge$\\(stored tag = tag)};
+\node[box] (ctrl)  at (0.45, -4.15) {\texttt{cache\_controller}\\5-state FSM};
+\node[box] (mem)   at (-2.45, -5.6) {\texttt{main\_memory}\\256 words, 4 cycles};
+\node[box] (cnt)   at (2.45, -5.6)  {Counters\\hits, misses, traffic};
+
+\draw[arr] (cpu) -- (split);
+\draw[arr] (split.west) -| node[left, pos=0.75]{index, offset} (rams.north);
+\draw[arr] (split.east) -| node[right, pos=0.75]{tag} (cmp.north);
+\draw[arr] (rams.east) -- node[above]{stored tag} (cmp.west);
+\draw[arr] (cmp.south) |- node[right, pos=0.3]{hit} (ctrl.east);
+\draw[darr] (ctrl.west) -| node[left, pos=0.8, align=right]{enables /\\valid, dirty} ([xshift=-1mm]rams.south east);
+\draw[darr] ([xshift=-6mm]rams.south) -- node[right, pos=0.7, align=left]{refill /\\write-back} ([xshift=-6mm]mem.north);
+\draw[darr] ([xshift=-4mm]ctrl.south) |- node[left, pos=0.35, align=right]{req /\\ready} (mem.east);
+\draw[arr] ([xshift=4mm]ctrl.south) |- node[right, pos=0.12]{events} (cnt.west);
+
+\begin{scope}[on background layer]
+\node[draw, dashed, rounded corners, fit=(split)(rams)(cmp)(ctrl)(mem)(cnt), inner sep=2.5mm] (top) {};
+\end{scope}
+\node[anchor=north east, font=\scriptsize\ttfamily] at (top.north east) {cache\_top};
+\end{tikzpicture}
