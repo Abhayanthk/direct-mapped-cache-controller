@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1580" viewBox="0 0 2200 1580">
+<defs><marker id="k" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#111"/></marker><marker id="r" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#c0392b"/></marker></defs>
+<rect width="2200" height="1580" fill="#fff"/>
+<text x="1100.0" y="70" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="46" font-weight="bold" fill="#111" text-anchor="middle">Cache Controller FSM (direct-mapped, 4-word blocks)</text>
+<text x="1100.0" y="115" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="25" font-weight="normal" fill="#555" text-anchor="middle">Mealy machine · state[2:0] · conditions on arrows, outputs set to 1 inside each state</text>
+<path d="M 560 290 L 756 290" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 850 212 C 820 120, 960 120, 935 208" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 900 362 L 900 596" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 1020 600 L 1020 366" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 1280 700 L 1596 700" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 1840 600 C 1840 420, 1620 290, 1166 290" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 2080 650 C 2175 630, 2175 770, 2084 750" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 780 800 L 520 1096" fill="none" stroke="#c0392b" stroke-width="3.5" marker-end="url(#r)"/>
+<path d="M 1080 800 L 1330 1096" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 1640 1100 C 1640 960, 1480 860, 1286 780" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 800 1215 L 1176 1215" fill="none" stroke="#c0392b" stroke-width="3.5" marker-end="url(#r)"/>
+<path d="M 380 1350 C 340 1450, 520 1450, 480 1354" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<path d="M 1440 1370 C 1400 1470, 1580 1470, 1540 1374" fill="none" stroke="#111" stroke-width="3.5" marker-end="url(#k)"/>
+<rect x="760" y="220" width="400" height="140" rx="70" fill="#fff" stroke="#111" stroke-width="5"/>
+<text x="960.0" y="278" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="40" font-weight="bold" fill="#111" text-anchor="middle">IDLE</text>
+<text x="960.0" y="320" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="25" font-weight="normal" fill="#555" text-anchor="middle">state = 0</text>
+<rect x="620" y="600" width="660" height="200" rx="28" fill="#fff" stroke="#111" stroke-width="5"/>
+<text x="950.0" y="658" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="40" font-weight="bold" fill="#111" text-anchor="middle">COMPARE</text>
+<text x="950.0" y="700" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="25" font-weight="normal" fill="#555" text-anchor="middle">state = 1 · check hit</text>
+<text x="950.0" y="742" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">read hit: cpu_ready</text>
+<text x="950.0" y="778" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">WB write hit: data_we, dirty=1, ready</text>
+<rect x="1600" y="600" width="480" height="200" rx="28" fill="#fff" stroke="#111" stroke-width="5"/>
+<text x="1840.0" y="658" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="40" font-weight="bold" fill="#111" text-anchor="middle">WRITE_MEM</text>
+<text x="1840.0" y="700" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="25" font-weight="normal" fill="#555" text-anchor="middle">state = 4 · write-through only</text>
+<text x="1840.0" y="742" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">mem_req, mem_we (one word)</text>
+<text x="1840.0" y="778" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">on mem_ready: cpu_ready</text>
+<rect x="160" y="1100" width="640" height="250" rx="28" fill="#fff" stroke="#c0392b" stroke-width="5"/>
+<text x="480.0" y="1158" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="40" font-weight="bold" fill="#111" text-anchor="middle">WRITE_BACK</text>
+<text x="480.0" y="1200" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="25" font-weight="normal" fill="#555" text-anchor="middle">state = 2 · save old dirty block</text>
+<text x="480.0" y="1242" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">mem_req, mem_we · 4 words</text>
+<text x="480.0" y="1278" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">addr = {stored_tag, index, word_cnt}</text>
+<rect x="1180" y="1100" width="720" height="270" rx="28" fill="#fff" stroke="#111" stroke-width="5"/>
+<text x="1540.0" y="1158" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="40" font-weight="bold" fill="#111" text-anchor="middle">ALLOCATE</text>
+<text x="1540.0" y="1200" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="25" font-weight="normal" fill="#555" text-anchor="middle">state = 3 · refill block from memory</text>
+<text x="1540.0" y="1242" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">mem_req · 4 words</text>
+<text x="1540.0" y="1278" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">each mem_ready: store word</text>
+<text x="1540.0" y="1314" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">last word: tag, valid=1, dirty=0</text>
+<text x="520" y="298" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="end">rst</text>
+<rect x="686.88" y="153" width="129.12" height="32" fill="#fff"/>
+<text x="810" y="175" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="end">!cpu_req</text>
+<rect x="766.52" y="468" width="114.48" height="32" fill="#fff"/>
+<text x="875" y="490" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="end">cpu_req</text>
+<rect x="1039" y="448" width="231.6" height="32" fill="#fff"/>
+<text x="1045" y="470" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="start">hit &amp;&amp; (read ||</text>
+<rect x="1039" y="480" width="363.36" height="32" fill="#fff"/>
+<text x="1045" y="502" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="start">write &amp;&amp; !write_through)</text>
+<text x="1438" y="650" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">hit &amp;&amp; write</text>
+<text x="1438" y="682" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">&amp;&amp; write_through</text>
+<rect x="1614" y="388" width="143.76" height="32" fill="#fff"/>
+<text x="1620" y="410" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="start">mem_ready</text>
+<rect x="1970.8" y="808" width="158.4" height="32" fill="#fff"/>
+<text x="2050" y="830" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">!mem_ready</text>
+<rect x="290.48" y="908" width="275.52" height="32" fill="#fff"/>
+<text x="560" y="930" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="end">miss &amp;&amp; line_valid</text>
+<rect x="363.68" y="940" width="202.32" height="32" fill="#fff"/>
+<text x="560" y="962" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="end">&amp;&amp; line_dirty</text>
+<rect x="966.52" y="938" width="216.96" height="32" fill="#fff"/>
+<text x="1075" y="960" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">miss &amp;&amp; (clean</text>
+<rect x="1003.12" y="970" width="143.76" height="32" fill="#fff"/>
+<text x="1075" y="992" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="middle">or empty)</text>
+<rect x="1684" y="938" width="187.68" height="32" fill="#fff"/>
+<text x="1690" y="960" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="start">mem_ready &amp;&amp;</text>
+<rect x="1684" y="970" width="202.32" height="32" fill="#fff"/>
+<text x="1690" y="992" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="start">word_cnt == 3</text>
+<rect x="1684" y="1002" width="202.32" height="32" fill="#fff"/>
+<text x="1690" y="1024" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24" font-weight="normal" fill="#111" text-anchor="start">(now it hits)</text>
+<text x="988" y="1193" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="22" font-weight="normal" fill="#111" text-anchor="middle">mem_ready &amp;&amp; word_cnt == 3</text>
+<text x="988" y="1252" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="normal" fill="#555" text-anchor="middle">write back BEFORE refill</text>
+<rect x="336.77" y="1470" width="186.46" height="30" fill="#fff"/>
+<text x="430" y="1490" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="22" font-weight="normal" fill="#111" text-anchor="middle">not last word</text>
+<rect x="269.67" y="1500" width="320.65999999999997" height="30" fill="#fff"/>
+<text x="430" y="1520" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="22" font-weight="normal" fill="#111" text-anchor="middle">word_cnt++ on mem_ready</text>
+<rect x="1396.77" y="1490" width="186.46" height="30" fill="#fff"/>
+<text x="1490" y="1510" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="22" font-weight="normal" fill="#111" text-anchor="middle">not last word</text>
+<rect x="1329.67" y="1520" width="320.65999999999997" height="30" fill="#fff"/>
+<text x="1490" y="1540" font-family="Menlo, DejaVu Sans Mono, monospace" font-size="22" font-weight="normal" fill="#111" text-anchor="middle">word_cnt++ on mem_ready</text>
+</svg>

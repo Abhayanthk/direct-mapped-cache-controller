@@ -1,4 +1,4 @@
-// cache_top: the whole system = cache + controller + main memory + counters.
+// cache_top: the whole system = direct-mapped cache + controller + main memory + counters.
 // Module, port and instance names (u_data, u_dirty, u_mem, ...) are used by
 // the system testbench to look inside, so they must stay as they are.
 
@@ -13,13 +13,16 @@ module cache_top (
     output wire [31:0] cpu_rdata,
     output wire        cpu_ready,
     output wire [15:0] mem_read_count,
-    output wire [15:0] mem_write_count
+    output wire [15:0] mem_write_count,
+    output wire [15:0] hit_count,
+    output wire [15:0] miss_count
 );
     // ---------- internal wires ----------
-    wire [4:0]  addr_tag;      // tag part of cpu_addr
+    wire [2:0]  addr_tag;      // tag part of cpu_addr
     wire [2:0]  index;         // index part of cpu_addr
-    wire [4:0]  stored_tag;    // tag RAM output
-    wire [31:0] line_data;     // data RAM output
+    wire [1:0]  offset;        // word-in-block part of cpu_addr
+    wire [2:0]  stored_tag;    // tag RAM output
+    wire [31:0] line_data;     // data RAM output: the selected word of the line
     wire        line_valid;    // valid RAM output
     wire        line_dirty;    // dirty RAM output
     wire        hit;
@@ -28,24 +31,29 @@ module cache_top (
     wire        data_we, data_from_mem, tag_we, valid_we, dirty_we, dirty_wdata;
     wire        mem_req, mem_we;
     wire [2:0]  state;
+    wire [1:0]  word_cnt;      // word being moved during a block refill / write-back
+    wire        burst;         // 1 while a block moves
+
+    // which word of the line is used: the moving word during a block move, else the CPU offset
+    wire [1:0]  word_sel = burst ? word_cnt : offset;
 
     // ---------- the two MUXes ----------
     // MUX 1: what goes INTO the data RAM? memory data (refill) or CPU data (write hit)
     wire [31:0] data_wdata = data_from_mem ? mem_rdata : cpu_wdata;
 
-    // MUX 2: which address goes to memory?
-    //   memory WRITE -> the address of the block sitting in the line = {stored_tag, index}
-    //   memory READ  -> the address the CPU asked for = cpu_addr
-    wire [7:0]  mem_addr = mem_we ? {stored_tag, index} : cpu_addr;
+    // MUX 2: which address goes to memory? (one word per access)
+    //   memory WRITE -> a word of the block sitting in the line = {stored_tag, index, word_sel}
+    //   memory READ  -> a word of the block the CPU asked for   = {addr_tag, index, word_sel}
+    wire [7:0]  mem_addr = mem_we ? {stored_tag, index, word_sel} : {addr_tag, index, word_sel};
 
-    // the CPU always reads the word in the selected line
+    // the CPU reads the selected word of the selected line
     assign cpu_rdata = line_data;
 
     // ---------- address split ----------
-    addr_split u_split (.addr(cpu_addr), .tag(addr_tag), .index(index));
+    addr_split u_split (.addr(cpu_addr), .tag(addr_tag), .index(index), .offset(offset));
 
     // ---------- storage ----------
-    data_ram  u_data  (.clk(clk), .index(index), .we(data_we),
+    data_ram  u_data  (.clk(clk), .index(index), .word(word_sel), .we(data_we),
                        .wdata(data_wdata), .rdata(line_data));
 
     tag_ram   u_tag   (.clk(clk), .index(index), .we(tag_we),
@@ -81,7 +89,9 @@ module cache_top (
         .dirty_wdata(dirty_wdata),
         .mem_req(mem_req),
         .mem_we(mem_we),
-        .state(state)
+        .state(state),
+        .word_cnt(word_cnt),
+        .burst(burst)
     );
 
     // ---------- main memory ----------
@@ -94,5 +104,10 @@ module cache_top (
     traffic_counter u_count (.clk(clk), .rst(rst), .mem_req(mem_req), .mem_we(mem_we),
                              .mem_ready(mem_ready),
                              .read_count(mem_read_count), .write_count(mem_write_count));
+
+    // ---------- hit/miss counter ----------
+    // state 1 is COMPARE in cache_controller
+    hit_miss_counter u_hits (.clk(clk), .rst(rst), .in_compare(state == 3'd1), .hit(hit),
+                             .cpu_ready(cpu_ready), .hit_count(hit_count), .miss_count(miss_count));
 
 endmodule

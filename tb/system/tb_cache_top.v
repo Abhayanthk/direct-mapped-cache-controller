@@ -81,18 +81,24 @@ module tb_cache_top;
             $display("T1 read miss");
             cpu_read(0);
             check("T1 data = starting value", got, 32'h1000);
-            check("T1 one memory read", mem_read_count, 1);
+            check("T1 whole block read: 4 memory reads", mem_read_count, 4);
+            check("T1 block word 3 refilled too", dut.u_data.words[3], 32'h1003);
 
             $display("T2 read hit");
             cpu_read(0);
             check("T2 same data", got, 32'h1000);
-            check("T2 no new memory read", mem_read_count, 1);
+            check("T2 no new memory read", mem_read_count, 4);
 
-            // addresses 0, 8 and 16 all map to line 0 (same index, different tag)
+            $display("T2b read hit on the next word (spatial locality)");
+            cpu_read(3);
+            check("T2b data of addr 3", got, 32'h1003);
+            check("T2b same block: no new memory read", mem_read_count, 4);
+
+            // addresses 0, 32 and 64 all map to line 0 (same index, different tag)
 
             $display("T3 write hit");
             cpu_write(0, 32'hAAAA);
-            check("T3 cache line updated", dut.u_data.lines[0], 32'hAAAA);
+            check("T3 cache line updated", dut.u_data.words[0], 32'hAAAA);
             if (!write_through) begin
                 check("T3 dirty bit = 1", dut.u_dirty.bits[0], 1);
                 check("T3 memory NOT updated yet", dut.u_mem.mem[0], 32'h1000);
@@ -102,17 +108,19 @@ module tb_cache_top;
             end
 
             $display("T4 eviction of line 0");
-            cpu_read(8);
-            check("T4 data = starting value of addr 8", got, 32'h1008);
+            cpu_read(32);
+            check("T4 data = starting value of addr 32", got, 32'h1020);
             check("T4 old value is in memory", dut.u_mem.mem[0], 32'hAAAA);
+            check("T4 rest of the old block is unchanged", dut.u_mem.mem[3], 32'h1003);
+            check("T4 write-back moves the whole block", mem_write_count, write_through ? 1 : 4);
 
             $display("T5 read back the evicted value");
             cpu_read(0);
             check("T5 written value survived", got, 32'hAAAA);
 
             $display("T6 write miss");
-            cpu_write(16, 32'hBBBB);
-            cpu_read(16);
+            cpu_write(64, 32'hBBBB);
+            cpu_read(64);
             check("T6 read back written value", got, 32'hBBBB);
 
             // print traffic before T7, because reset clears the counters
@@ -120,9 +128,9 @@ module tb_cache_top;
 
             $display("T7 reset empties the cache");
             reset_system;
-            cpu_read(16);
-            check("T7 read after reset is a miss", mem_read_count, 1);
-            check("T7 memory back to starting value", got, 32'h1010);
+            cpu_read(64);
+            check("T7 read after reset is a miss", mem_read_count, 4);
+            check("T7 memory back to starting value", got, 32'h1040);
         end
 
         if (fails == 0) $display("\nALL SYSTEM TESTS PASSED");

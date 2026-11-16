@@ -20,8 +20,9 @@ module tb_demo;
     task show_cache;
         begin
             for (k = 0; k < 8; k = k + 1)
-                $display("S|%0d|%b|%b|%0d|%h", k, dut.u_valid.bits[k], dut.u_dirty.bits[k],
-                         dut.u_tag.lines[k], dut.u_data.lines[k]);
+                $display("S|%0d|%b|%b|%0d|%h %h %h %h", k, dut.u_valid.bits[k], dut.u_dirty.bits[k],
+                         dut.u_tag.lines[k], dut.u_data.words[4*k], dut.u_data.words[4*k+1],
+                         dut.u_data.words[4*k+2], dut.u_data.words[4*k+3]);
         end
     endtask
 
@@ -41,18 +42,18 @@ module tb_demo;
             @(negedge clk); cpu_req = 0; cpu_we = 0;
             @(negedge clk);
             $display("A|%0d|%0d|%h|%0d|%0s|%0d|%0d|%b|%0d|%h", is_write, addr, is_write ? wdata : got,
-                     cycles, trail, rc, wc, dut.u_dirty.bits[addr[2:0]], dut.u_mem.mem[addr], dut.u_mem.mem[addr]);
+                     cycles, trail, rc, wc, dut.u_dirty.bits[addr[4:2]], dut.u_mem.mem[addr], dut.u_mem.mem[addr]);
         end
     endtask
 
     task run_workload;
         begin
-            access(0, 16, 0);
+            access(0, 0, 0);
             access(0, 1, 0);
-            access(0, 21, 0);
+            access(0, 20, 0);
             access(1, 1, 32'hAAAA);
-            access(0, 21, 0);
-            access(0, 9, 0);
+            access(0, 20, 0);
+            access(0, 33, 0);
             access(0, 1, 0);
         end
     endtask

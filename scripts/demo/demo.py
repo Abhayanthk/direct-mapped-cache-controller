@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Readable demo of the write-back cache: traced workload, cache contents and traffic comparison.
+"""Readable demo of the direct-mapped cache controller: traced workload, cache contents and traffic comparison.
 
 Usage: python3 scripts/demo/demo.py [repo-root]   (or ./scripts/demo.sh)
 """
@@ -29,16 +29,18 @@ out = sh(["vvp", "-n", os.path.join(BUILD, "demo")])
 
 STATE = {"0": "IDLE", "1": "COMPARE", "2": "WRITE_BACK", "3": "ALLOCATE", "4": "WRITE_MEM"}
 NOTE_WB = {
-    1: "cold miss: line empty, refill from memory",
-    2: "cold miss: refill",
-    3: "cold miss: refill",
+    1: "cold miss: line empty, the whole 4-word block (addresses 0-3) is read in",
+    2: "read hit: address 1 came in with address 0's block (spatial locality)",
+    3: "cold miss: block 20-23 read into line 5",
     4: "write hit: only the cache changes, line marked DIRTY, memory untouched",
-    5: "read hit: no memory access",
-    6: "conflict: dirty line saved to memory FIRST, then refilled",
+    5: "read hit: no memory access (temporal locality)",
+    6: "conflict: 33 also maps to line 0; dirty block (4 words) saved FIRST, then refilled",
     7: "miss: the value written back earlier is read back correctly",
 }
 NOTE_WT = {
-    1: "cold miss: refill", 2: "cold miss: refill", 3: "cold miss: refill",
+    1: "cold miss: whole block read in",
+    2: "read hit: same block as address 0 (spatial locality)",
+    3: "cold miss: block read in",
     4: "write hit: cache AND memory written together, so the CPU waits for memory",
     5: "read hit: no memory access",
     6: "conflict: line is clean, so no write-back needed",
@@ -55,37 +57,37 @@ for line in out.splitlines():
 def render(mode, notes):
     print()
     title = "WRITE-BACK" if mode == "write-back" else "WRITE-THROUGH"
-    print(bold(f"  {title} MODE") + dim("   (8-line direct-mapped cache, memory takes 4 cycles per access)"))
+    print(bold(f"  {title} MODE") + dim("   (8 lines x 4-word blocks, direct-mapped, memory takes 4 cycles per word)"))
     print()
-    hdr = f"  {'#':>2}  {'Operation':<26} {'Tag':>3} {'Line':>4}  {'Result':<18} {'Cycles':>6}  {'Path through the controller':<44} {'Mem R/W':>8}"
+    hdr = f"  {'#':>2}  {'Operation':<26} {'Tag':>3} {'Line':>4} {'Word':>4}  {'Result':<18} {'Cycles':>6}  {'Path through the controller':<44} {'Mem R/W':>8}"
     print(dim(hdr)); print(dim("  " + "-" * (len(hdr) - 2)))
     for i, s in enumerate(steps[mode], 1):
         is_w, addr, data, cycles, trail, rc, wc, dirty, _, _ = s
-        addr = int(addr); tag, line = addr >> 3, addr & 7
+        addr = int(addr); tag, line, word = addr >> 5, (addr >> 2) & 7, addr & 3
         path = [STATE[c] for c in trail]
         if "WRITE_BACK" in path: res = red("MISS + evict")
         elif "ALLOCATE" in path: res = yellow("MISS")
         elif "WRITE_MEM" in path: res = blue("HIT + write-thru")
         else: res = green("HIT")
-        raw = {"MISS + evict": 12, "MISS": 4, "HIT + write-thru": 16, "HIT": 3}
         txt = re.sub(r"\033\[[0-9;]*m", "", res)
         res_pad = res + " " * (18 - len(txt))
         op = ("WRITE" if is_w == "1" else "READ ") + f" addr {addr:>3}" + (f" = 0x{int(data,16):X}" if is_w == "1" else "")
-        print(f"  {i:>2}  {op:<26} {tag:>3} {line:>4}  {res_pad} {cycles:>6}  {' > '.join(path):<44} {rc:>4} / {wc}")
+        print(f"  {i:>2}  {op:<26} {tag:>3} {line:>4} {word:>4}  {res_pad} {cycles:>6}  {' > '.join(path):<44} {rc:>4} / {wc}")
         print(dim(f"      {notes[i]}"))
     print()
     print(bold("  Cache contents at the end"))
-    print(dim("  line  valid  dirty  tag  data          holds address"))
+    print(dim("  line  valid  dirty  tag  words 0-3 of the block                    holds addresses"))
     for k, v, d, t, data in caches[mode]:
         if v == "1":
-            held = int(t) * 8 + int(k)
+            base = int(t) * 32 + int(k) * 4
             dtxt = red("1") if d == "1" else "0"
-            print(f"  {k:>4}   {v}      {dtxt}     {int(t):>3}  0x{int(data,16):08X}   {held}")
+            words = " ".join(f"{int(w, 16):08X}" for w in data.split())
+            print(f"  {k:>4}   {v}      {dtxt}     {int(t):>3}  {words}   {base}-{base + 3}")
         else:
-            print(dim(f"  {k:>4}   0      0       -   -             -"))
+            print(dim(f"  {k:>4}   0      0       -   -" + " " * 40 + "-"))
 
-print(); print(bold(cyan("  WRITE-BACK CACHE: LIVE DEMO")))
-print(dim("  Same 7 accesses in both modes. Addresses 1 and 9 share line 1 (tags 0 and 1)."))
+print(); print(bold(cyan("  DIRECT-MAPPED CACHE CONTROLLER: LIVE DEMO")))
+print(dim("  Same 7 accesses in both modes. Addresses 1 and 33 share line 0 (tags 0 and 1)."))
 render("write-back", NOTE_WB)
 render("write-through", NOTE_WT)
 
@@ -107,5 +109,6 @@ for w in sorted(rows):
     print(f"      write-back     {green('#' * max(1, round(wb[0] / mx * 40))) if wb[0] else dim('')} {wb[0]} writes, {wb[1]} cycles")
     print(f"      write-through  {red('#' * max(1, round(wt[0] / mx * 40))) if wt[0] else dim('')} {wt[0]} writes, {wt[1]} cycles")
     print()
-print(dim("  Write-back wins when a line is written repeatedly (W1, W4); they tie on W2 and on reads (W3)."))
+print(dim("  Write-back wins when one word is written many times (W1). A dirty line writes back all 4 words,"))
+print(dim("  so write-through wins when lines are written only once or twice (W2, W4). Reads tie (W3)."))
 print()
