@@ -251,7 +251,7 @@ scripts/
   demo.sh        readable demo
   demo/          demo script and its testbench
 docs/
-  diagrams/      FSM diagram (fsm.d2 source, fsm.png)
+  diagrams/      FSM diagram (fsm.svg source, fsm.png)
   results/       waveforms, hit/miss report, synthesis, traffic comparison
 ```
 
