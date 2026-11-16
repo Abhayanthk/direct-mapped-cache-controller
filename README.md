@@ -16,16 +16,12 @@
 
 ## Overview
 
-A cache is a small, fast memory that keeps copies of recently used words, so most CPU accesses never reach the slow main memory. This cache supports two ways of handling writes, and the project compares them on main-memory traffic:
+Direct-mapped, 8-line cache with write-back and write-through modes, a controller FSM, a slow main-memory model and traffic counters. The design is verified by unit tests, a two-mode system test and a four-workload traffic comparison.
 
-| Policy | What a write does | Main memory is updated | Extra storage |
-| --- | --- | --- | --- |
-| Write-through | changes the cache and main memory together | on every write | none |
-| Write-back | changes only the cache and marks the line **dirty** | later, when the dirty line is evicted | 1 dirty bit per line |
-
-A line is **dirty** when the cache holds a newer value than main memory. **Evicting** a line means removing it to make room for another.
-
-Every module has its own unit test, a system test runs the whole cache in both write modes, and a traffic comparison measures four workloads.
+| Policy | Write hit | Main memory updated |
+| --- | --- | --- |
+| Write-through | cache and memory | on every write |
+| Write-back | cache only, line marked dirty | when the dirty line is evicted |
 
 ## Architecture
 
@@ -53,69 +49,48 @@ flowchart TD
     CTRL -->|"cpu_ready"| OUT["cpu_rdata, cpu_ready"]
 ```
 
-### Design parameters
+### Parameters
 
 | Parameter | Value |
 | --- | --- |
-| Main memory | 256 words x 32 bits, 8-bit word address, 4 clock cycles per access |
-| Cache organisation | direct-mapped (each address has exactly one possible line), 8 lines, 1 word per line |
-| Write policy | write-back, or write-through when the `write_through` input is 1 |
-| Write miss | load the line from memory first, then write to it (write-allocate) |
+| Main memory | 256 x 32-bit words, 8-bit word address, 4 cycles per access |
+| Cache | direct-mapped, 8 lines, 1 word per line |
+| Address split | tag `[7:3]` (5 bits), index `[2:0]` (3 bits), no offset |
+| Cache line | valid (1), dirty (1), tag (5), data (32): 39 bits, 312 bits in total |
+| Hit | valid AND stored tag equals address tag |
+| Write policy | write-back; write-through when `write_through` = 1 |
+| Write miss | write-allocate |
 
-### Address mapping
-
-The 8-bit address is split into a tag and an index. The index selects the cache line, and the tag says which memory address currently occupies that line.
-
-```
- bit:  7 6 5 4 3 | 2 1 0
-       tag [7:3] | index [2:0]
-```
-
-For example, address 21 is `00010 101`, so it maps to **line 5** with **tag 2**. Every address whose last three bits are `101` uses line 5, so each line stores a tag to know which one it holds.
-
-### Cache line
-
-| Field | Bits | Meaning |
-| --- | --- | --- |
-| valid | 1 | the line holds real data (0 after reset) |
-| dirty | 1 | the line was written and main memory is out of date |
-| tag | 5 | which address the line holds |
-| data | 32 | one word |
-
-Each line is 39 bits, so the 8 lines store 312 bits. A **hit** happens when the line is valid **and** its stored tag equals the address tag.
+Example: address 21 (`00010 101`) maps to line 5 with tag 2.
 
 ### Datapath multiplexers
 
-| Multiplexer | What it chooses |
-| --- | --- |
-| Data RAM input | the CPU word on a write hit, or the memory word on a refill: `data_from_mem ? mem_rdata : cpu_wdata` |
-| Memory address | the CPU address for a read, or the old line's address `{stored_tag, index}` for a write-back: `mem_we ? {stored_tag, index} : cpu_addr` |
+| Multiplexer | Expression | Purpose |
+| --- | --- | --- |
+| Data RAM input | `data_from_mem ? mem_rdata : cpu_wdata` | refill or write hit |
+| Memory address | `mem_we ? {stored_tag, index} : cpu_addr` | write-back or read |
 
 ## Operation
-
-The controller is a finite state machine (FSM). Every cycle it decides whether to serve a hit, write back a dirty line, or refill from memory.
 
 ![Controller FSM](docs/diagrams/fsm.png)
 
 | State | Code | Function |
 | --- | --- | --- |
 | `IDLE` | 0 | wait for a CPU request |
-| `COMPARE` | 1 | check for a hit, serve it, or choose the miss path |
+| `COMPARE` | 1 | check for a hit; serve it or choose the miss path |
 | `WRITE_BACK` | 2 | write the old dirty word to memory |
 | `ALLOCATE` | 3 | read the new word from memory and refill the line |
 | `WRITE_MEM` | 4 | write-through only: write memory, then answer the CPU |
 
-Three rules define correct behaviour:
+Invariants:
 
-1. **Write back before refill.** `WRITE_BACK` always leads to `ALLOCATE`. In the reverse order the refill would overwrite the dirty word and the CPU's write would be lost.
-2. **A refill makes the line clean.** The dirty bit is written as 0 when `ALLOCATE` completes.
-3. **Only a write hit in write-back mode sets the dirty bit.** Write-through never does.
+1. `WRITE_BACK` always precedes `ALLOCATE`; the refill never overwrites an unsaved dirty word.
+2. A refill writes dirty = 0.
+3. Only a write hit in write-back mode sets dirty.
 
-After `ALLOCATE` the FSM goes back to `COMPARE`, which now finds a hit and serves the request normally.
+### Example: dirty eviction
 
-### Worked example: dirty eviction
-
-Addresses 0 and 8 share line 0. The log below comes from the system test (tests T3 and T4):
+Addresses 0 and 8 map to line 0 (system tests T3 and T4):
 
 ```
 T3 write hit
@@ -128,44 +103,41 @@ T4 eviction of line 0
 
 ![Dirty eviction waveform](docs/results/t4-dirty-eviction.png)
 
-In the waveform the state goes `COMPARE`, `WRITE_BACK`, `ALLOCATE`, `COMPARE` (codes 1, 2, 3, 1). `mem_addr` is 0 during the write-back and 8 during the refill.
-
 ## Modules
 
-| Module | File | Function | Test command |
-| --- | --- | --- | --- |
-| `data_ram`, `tag_ram`, `valid_ram`, `dirty_ram` | [`rtl/storage/`](rtl/storage) | one entry per cache line; reads are instant, writes happen on the clock edge | `./scripts/run.sh storage` |
-| `addr_split`, `tag_comparator`, `traffic_counter` | [`rtl/hit_logic/`](rtl/hit_logic) | split the address, decide hit or miss, count memory reads and writes | `./scripts/run.sh hit` |
-| `main_memory` | [`rtl/memory/`](rtl/memory) | slow memory with a request and ready handshake | `./scripts/run.sh memory` |
-| `cache_controller` | [`rtl/controller/`](rtl/controller) | the controller FSM | `./scripts/run.sh controller` |
-| `cache_top` | [`rtl/top/`](rtl/top) | connects all modules | `./scripts/run.sh system` |
+| Module | Path | Test |
+| --- | --- | --- |
+| `data_ram`, `tag_ram`, `valid_ram`, `dirty_ram` | [`rtl/storage/`](rtl/storage) | `./scripts/run.sh storage` |
+| `addr_split`, `tag_comparator`, `traffic_counter` | [`rtl/hit_logic/`](rtl/hit_logic) | `./scripts/run.sh hit` |
+| `main_memory` | [`rtl/memory/`](rtl/memory) | `./scripts/run.sh memory` |
+| `cache_controller` | [`rtl/controller/`](rtl/controller) | `./scripts/run.sh controller` |
+| `cache_top` | [`rtl/top/`](rtl/top) | `./scripts/run.sh system` |
 
 ## Verification
 
-| Suite | Location | Checks |
+| Suite | File | Scope |
 | --- | --- | --- |
-| Storage | `tb/unit/tb_storage.v` | reset, write and read per line, write enable, writing one line leaves the others unchanged |
-| Hit logic | `tb/unit/tb_hit_logic.v` | address split, hit and miss decisions, counters |
-| Main memory | `tb/unit/tb_main_memory.v` | initial contents, 4-cycle read and write latency, ready drops after each access, back-to-back accesses |
-| Controller | `tb/unit/tb_cache_controller.v` | all five states with their outputs and transitions, in both write modes |
-| System | `tb/system/tb_cache_top.v` | seven tests (below), run in both write modes |
+| Storage | `tb/unit/tb_storage.v` | reset, per-line read and write, line independence |
+| Hit logic | `tb/unit/tb_hit_logic.v` | address split, hit decision, counters |
+| Main memory | `tb/unit/tb_main_memory.v` | initial contents, 4-cycle latency, ready handshake |
+| Controller | `tb/unit/tb_cache_controller.v` | all states, outputs and transitions in both modes |
+| System | `tb/system/tb_cache_top.v` | tests T1 to T7 in both modes |
 
-System tests: **T1** read miss, **T2** read hit, **T3** write hit and dirty bit, **T4** dirty eviction, **T5** the written value survives the round trip, **T6** write miss, **T7** reset empties the cache.
+System tests: T1 read miss, T2 read hit, T3 write hit and dirty bit, T4 dirty eviction, T5 evicted value read back, T6 write miss, T7 reset.
 
-### Waveforms
-
-| Figure | Shows |
+| Waveform | Content |
 | --- | --- |
-| [`member1-storage-wave.png`](docs/results/member1-storage-wave.png) | storage: data changes only after a clock edge while write enable is 1 |
-| [`member3-memory-wave.png`](docs/results/member3-memory-wave.png) | main memory: `wait_count` 0 to 3, then a one-cycle `mem_ready` |
-| [`member4-fsm-wave.png`](docs/results/member4-fsm-wave.png) | controller: dirty read miss, `COMPARE` to `WRITE_BACK` to `ALLOCATE` |
-| [`t2-read-hit.png`](docs/results/t2-read-hit.png) | system, read hit: no memory request |
-| [`t3-write-hit-dirty.png`](docs/results/t3-write-hit-dirty.png) | system, write-back write hit: dirty goes 0 to 1, memory untouched |
-| [`t3-write-through.png`](docs/results/t3-write-through.png) | system, write-through: the memory write happens immediately |
+| [`member1-storage-wave.png`](docs/results/member1-storage-wave.png) | storage RAMs |
+| [`member3-memory-wave.png`](docs/results/member3-memory-wave.png) | main-memory latency and ready pulse |
+| [`member4-fsm-wave.png`](docs/results/member4-fsm-wave.png) | controller, dirty read miss |
+| [`t2-read-hit.png`](docs/results/t2-read-hit.png) | system, read hit |
+| [`t3-write-hit-dirty.png`](docs/results/t3-write-hit-dirty.png) | system, write-back write hit |
+| [`t3-write-through.png`](docs/results/t3-write-through.png) | system, write-through write |
+| [`t4-dirty-eviction.png`](docs/results/t4-dirty-eviction.png) | system, dirty eviction |
 
 ## Results
 
-Four workloads were run in both write modes (`./scripts/run.sh traffic`):
+`./scripts/run.sh traffic` runs four workloads in both modes:
 
 | Workload | Policy | Memory reads | Memory writes | Clock cycles |
 | --- | --- | --- | --- | --- |
@@ -178,15 +150,14 @@ Four workloads were run in both write modes (`./scripts/run.sh traffic`):
 | W4: write, rewrite, read 8 lines, then evict | write-back | 16 | 8 | 232 |
 | W4: write, rewrite, read 8 lines, then evict | write-through | 16 | 16 | 272 |
 
-- Write-back wins when a line is written repeatedly (W1, W4): fewer memory writes and fewer cycles.
-- They tie when each line is written once (W2), because every dirty line must still be written back once.
-- Reads give identical results (W3), since the policies differ only on writes.
+- Write-back reduces memory writes and cycles when lines are written repeatedly (W1, W4).
+- The policies tie when each line is written once (W2) and on read-only traffic (W3).
 
-The full explanation is in [`docs/results/traffic-comparison.md`](docs/results/traffic-comparison.md).
+Details: [`docs/results/traffic-comparison.md`](docs/results/traffic-comparison.md).
 
 ## Getting started
 
-Requires [Icarus Verilog](https://steveicarus.github.io/iverilog/) (`iverilog` and `vvp`): `brew install icarus-verilog` on macOS, `sudo apt install iverilog` on Debian or Ubuntu. On Windows, install it from the project site and run the commands in Git Bash.
+Requires [Icarus Verilog](https://steveicarus.github.io/iverilog/) (`brew install icarus-verilog` on macOS, `sudo apt install iverilog` on Debian or Ubuntu; Git Bash on Windows).
 
 ```bash
 git clone https://github.com/Abhayanthk/writeback-cache-verilog.git
@@ -201,15 +172,9 @@ chmod +x scripts/run.sh
 | `./scripts/run.sh unit` | the four unit tests |
 | `./scripts/run.sh storage`, `hit`, `memory`, `controller` | one unit test |
 | `./scripts/run.sh system` | the system test in both modes |
-| `./scripts/run.sh traffic` | the write-back vs write-through table |
+| `./scripts/run.sh traffic` | the traffic comparison |
 
-A successful run prints `ALL ... TESTS PASSED` for each suite. Waveforms are saved in `build/*.vcd`; open them in any VCD viewer, for example [Surfer](https://surfer-project.org/).
-
-Reading the system-test log:
-
-- `MEMORY READ` is a refill after a miss.
-- `MEMORY WRITE` in write-back mode is a dirty eviction.
-- A `CPU READ` with no `MEMORY` line before it is a hit.
+Waveforms are written to `build/*.vcd` and open in any VCD viewer, for example [Surfer](https://surfer-project.org/).
 
 ## Repository structure
 
@@ -221,7 +186,7 @@ rtl/
   controller/    cache controller FSM
   top/           cache_top
 tb/
-  unit/          one unit test per module group
+  unit/          unit tests
   system/        system test and traffic comparison
 scripts/         run.sh
 docs/
@@ -231,10 +196,10 @@ docs/
 
 ## Limitations
 
-- Blocks hold 1 word, so nearby addresses give no benefit, and addresses that share a line can evict each other (conflict misses).
-- One request is handled at a time, with no write buffer.
-- Main memory is a simulation model with a fixed 4-cycle delay, not a real DRAM controller.
-- Tested in simulation only, not on an FPGA board.
+- 1-word blocks: no spatial locality; addresses that share a line can evict each other.
+- One request at a time; no write buffer.
+- Main memory is a fixed-latency model, not a DRAM controller.
+- Simulation only; not synthesised.
 
 ## Team
 
