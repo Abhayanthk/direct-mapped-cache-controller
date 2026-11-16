@@ -211,8 +211,8 @@ Step 2 hits because address 1 arrived with address 0's block. Addresses 1 and 33
 Requires [Icarus Verilog](https://steveicarus.github.io/iverilog/) (`brew install icarus-verilog` on macOS, `sudo apt install iverilog` on Debian or Ubuntu; Git Bash on Windows). The demo and the trace generator need Python 3; synthesis needs Yosys and nextpnr-ice40.
 
 ```bash
-git clone https://github.com/Abhayanthk/writeback-cache-verilog.git
-cd writeback-cache-verilog
+git clone https://github.com/Abhayanthk/direct-mapped-cache-controller.git
+cd direct-mapped-cache-controller
 chmod +x scripts/run.sh
 ./scripts/run.sh
 ```
