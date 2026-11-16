@@ -4,6 +4,8 @@ module tb_cache_controller;
     reg  cpu_req = 0, cpu_we = 0, hit = 0, line_valid = 0, line_dirty = 0, mem_ready = 0;
     wire cpu_ready, data_we, data_from_mem, tag_we, valid_we, dirty_we, dirty_wdata, mem_req, mem_we;
     wire [2:0] state;
+    wire [1:0] word_cnt;
+    wire       burst;
     integer fails = 0;
 
     localparam IDLE = 0, COMPARE = 1, WRITE_BACK = 2, ALLOCATE = 3, WRITE_MEM = 4;
@@ -14,7 +16,7 @@ module tb_cache_controller;
         .line_valid(line_valid), .line_dirty(line_dirty), .mem_ready(mem_ready),
         .cpu_ready(cpu_ready), .data_we(data_we), .data_from_mem(data_from_mem),
         .tag_we(tag_we), .valid_we(valid_we), .dirty_we(dirty_we), .dirty_wdata(dirty_wdata),
-        .mem_req(mem_req), .mem_we(mem_we), .state(state)
+        .mem_req(mem_req), .mem_we(mem_we), .state(state), .word_cnt(word_cnt), .burst(burst)
     );
 
     always #5 clk = ~clk;
@@ -31,6 +33,16 @@ module tb_cache_controller;
 
     task next_cycle;
         begin @(negedge clk); end
+    endtask
+
+    // memory finishes n word accesses, one per cycle
+    task memory_words(input integer n);
+        integer k;
+        begin
+            for (k = 0; k < n; k = k + 1) begin
+                mem_ready = 1; next_cycle; mem_ready = 0;
+            end
+        end
     endtask
 
     initial begin
@@ -62,24 +74,37 @@ module tb_cache_controller;
         check("WB write hit -> IDLE", state, IDLE);
         cpu_req = 0; cpu_we = 0; hit = 0; next_cycle;
 
-        // 3. Read miss, old line clean -> ALLOCATE -> COMPARE
+        // 3. Read miss, old line clean -> ALLOCATE (4 words) -> COMPARE
         cpu_req = 1; next_cycle;
         hit = 0; line_valid = 1; line_dirty = 0; next_cycle;
         check("clean miss -> ALLOCATE", state, ALLOCATE);
         check("ALLOCATE: mem_req = 1", mem_req, 1);
         check("ALLOCATE: mem_we = 0 (read)", mem_we, 0);
         check("ALLOCATE: nothing written while waiting", data_we, 0);
+        check("ALLOCATE: block move uses word_cnt", burst, 1);
+        check("ALLOCATE: starts at word 0", word_cnt, 0);
         next_cycle; next_cycle;
         check("ALLOCATE waits for memory", state, ALLOCATE);
         mem_ready = 1; #1;
-        check("refill: data_we = 1", data_we, 1);
-        check("refill: data_from_mem = 1", data_from_mem, 1);
-        check("refill: tag_we = 1", tag_we, 1);
+        check("word 0 arrives: data_we = 1", data_we, 1);
+        check("word 0 arrives: data_from_mem = 1", data_from_mem, 1);
+        check("word 0 arrives: tag NOT written yet", tag_we, 0);
+        next_cycle; mem_ready = 0;
+        check("after word 0: still ALLOCATE", state, ALLOCATE);
+        check("after word 0: word_cnt = 1", word_cnt, 1);
+        memory_words(2);
+        check("after word 2: word_cnt = 3", word_cnt, 3);
+        mem_ready = 1; #1;
+        check("last word: data_we = 1", data_we, 1);
+        check("last word: data_from_mem = 1", data_from_mem, 1);
+        check("last word: tag_we = 1", tag_we, 1);
         check("refill: valid_we = 1", valid_we, 1);
         check("refill: dirty_we = 1", dirty_we, 1);
         check("refill: dirty_wdata = 0 (clean)", dirty_wdata, 0);
         next_cycle; mem_ready = 0; hit = 1;
         check("after refill -> COMPARE", state, COMPARE);
+        check("after refill: word_cnt back to 0", word_cnt, 0);
+        check("after refill: CPU offset selects the word", burst, 0);
         #1; check("now it hits: cpu_ready = 1", cpu_ready, 1);
         next_cycle; cpu_req = 0; hit = 0; next_cycle;
 
@@ -89,9 +114,11 @@ module tb_cache_controller;
         check("dirty miss -> WRITE_BACK", state, WRITE_BACK);
         check("WRITE_BACK: mem_req = 1", mem_req, 1);
         check("WRITE_BACK: mem_we = 1", mem_we, 1);
-        mem_ready = 1; next_cycle; mem_ready = 0;
+        memory_words(1);
+        check("WRITE_BACK: 1 of 4 words saved, still WRITE_BACK", state, WRITE_BACK);
+        memory_words(3);
         check("WRITE_BACK done -> ALLOCATE (old block saved first)", state, ALLOCATE);
-        mem_ready = 1; next_cycle; mem_ready = 0; line_dirty = 0; hit = 1;
+        memory_words(4); line_dirty = 0; hit = 1;
         check("refill done -> COMPARE", state, COMPARE);
         next_cycle; cpu_req = 0; hit = 0; next_cycle;
 
@@ -119,7 +146,7 @@ module tb_cache_controller;
         check("empty line: no write-back request", mem_we, 0);
         next_cycle;
         check("empty-line miss -> ALLOCATE (not WRITE_BACK)", state, ALLOCATE);
-        mem_ready = 1; next_cycle; mem_ready = 0; line_dirty = 0; hit = 1;
+        memory_words(4); line_dirty = 0; hit = 1;
         next_cycle; cpu_req = 0; hit = 0; next_cycle;
 
         // 7. Write miss on a dirty line in write-back mode: full path
@@ -130,8 +157,9 @@ module tb_cache_controller;
         check("WRITE_BACK: CPU not answered yet", cpu_ready, 0);
         next_cycle;
         check("WRITE_BACK holds until mem_ready", state, WRITE_BACK);
-        mem_ready = 1; next_cycle; mem_ready = 0;
-        mem_ready = 1; next_cycle; mem_ready = 0; line_dirty = 0; hit = 1; #1;
+        memory_words(4);
+        check("write miss: block saved -> ALLOCATE", state, ALLOCATE);
+        memory_words(4); line_dirty = 0; hit = 1; #1;
         check("write after refill: data_we = 1", data_we, 1);
         check("write after refill: data_from_mem = 0 (CPU data)", data_from_mem, 0);
         check("write after refill: dirty_wdata = 1", dirty_wdata, 1);

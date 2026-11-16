@@ -1,0 +1,31 @@
+# Cache controller FSM. Render: d2 --layout dagre --pad 40 fsm.d2 fsm.svg
+direction: down
+title: |md
+  # Cache Controller FSM (direct-mapped, 4-word blocks)
+  Mealy machine · state[2:0] · conditions on arrows, outputs inside each state
+| {near: top-center}
+
+classes: {
+  st: {style: {border-radius: 16; stroke: "#111"; stroke-width: 3; fill: "#fff"; font-size: 22; bold: true}}
+}
+
+rst: "rst" {shape: text}
+IDLE: "IDLE\nstate = 0" {class: st}
+COMPARE: "COMPARE\nstate = 1 · check hit\nread hit: cpu_ready\nWB write hit: data_we, dirty=1, cpu_ready" {class: st}
+WRITE_MEM: "WRITE_MEM\nstate = 4 · write-through only\nmem_req, mem_we (one word)\non mem_ready: cpu_ready" {class: st}
+WRITE_BACK: "WRITE_BACK\nstate = 2 · save old dirty block\nmem_req, mem_we, 4 words\naddr = {stored_tag, index, word_cnt}" {class: st; style.stroke: "#c0392b"}
+ALLOCATE: "ALLOCATE\nstate = 3 · refill block from memory\nmem_req, 4 words\neach mem_ready: store word word_cnt\nlast word: tag, valid=1, dirty=0" {class: st}
+
+rst -> IDLE
+IDLE -> IDLE: "!cpu_req"
+IDLE -> COMPARE: "cpu_req"
+COMPARE -> IDLE: "hit && (read ||\nwrite && !write_through)"
+COMPARE -> WRITE_MEM: "hit && write\n&& write_through"
+WRITE_MEM -> WRITE_MEM: "!mem_ready"
+WRITE_MEM -> IDLE: "mem_ready"
+COMPARE -> WRITE_BACK: "miss && line_valid\n&& line_dirty" {style.stroke: "#c0392b"; style.stroke-width: 3}
+COMPARE -> ALLOCATE: "miss && (clean\nor empty)"
+WRITE_BACK -> WRITE_BACK: "not last word\n(word_cnt++ on mem_ready)"
+WRITE_BACK -> ALLOCATE: "mem_ready && word_cnt == 3\nwrite back BEFORE refill" {style.stroke: "#c0392b"; style.stroke-width: 3}
+ALLOCATE -> ALLOCATE: "not last word\n(word_cnt++ on mem_ready)"
+ALLOCATE -> COMPARE: "mem_ready && word_cnt == 3\n(now it hits)"

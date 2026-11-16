@@ -55,35 +55,35 @@ module tb_traffic;
             start_workload(mode);
             for (i = 0; i < 20; i = i + 1)
                 cpu_access(1, 8'd0, i);
-            cpu_access(0, 8'd8, 0);
+            cpu_access(0, 8'd32, 0);
             report("W1: 20 writes to one address, then evict", mode);
         end
 
         for (mode = 0; mode < 2; mode = mode + 1) begin
             start_workload(mode);
             for (i = 0; i < 8; i = i + 1)
-                cpu_access(1, i, i);
-            for (i = 8; i < 16; i = i + 1)
-                cpu_access(0, i, 0);
+                cpu_access(1, 4 * i, i);
+            for (i = 0; i < 8; i = i + 1)
+                cpu_access(0, 32 + 4 * i, 0);
             report("W2: write 8 lines once each, then evict all", mode);
         end
 
         for (mode = 0; mode < 2; mode = mode + 1) begin
             start_workload(mode);
             for (i = 0; i < 16; i = i + 1)
-                cpu_access(0, i % 8, 0);
-            report("W3: read-only (8 addresses, twice)", mode);
+                cpu_access(0, 4 * (i % 8), 0);
+            report("W3: read-only (8 lines, twice)", mode);
         end
 
         for (mode = 0; mode < 2; mode = mode + 1) begin
             start_workload(mode);
             for (i = 0; i < 8; i = i + 1) begin
-                cpu_access(1, 8'd40 + i, i);
-                cpu_access(1, 8'd40 + i, i + 100);
-                cpu_access(0, 8'd40 + i, 0);
+                cpu_access(1, 4 * i, i);
+                cpu_access(1, 4 * i, i + 100);
+                cpu_access(0, 4 * i, 0);
             end
             for (i = 0; i < 8; i = i + 1)
-                cpu_access(0, i, 0);
+                cpu_access(0, 32 + 4 * i, 0);
             report("W4: loop-like (write, rewrite, read 8 lines), then evict", mode);
         end
 
