@@ -8,7 +8,7 @@
 
 <br>
 
-[Overview](#overview) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Operation](#operation) &nbsp;·&nbsp; [Modules](#modules) &nbsp;·&nbsp; [Verification](#verification) &nbsp;·&nbsp; [Results](#results) &nbsp;·&nbsp; [Getting started](#getting-started) &nbsp;·&nbsp; [Team](#team)
+[Overview](#overview) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Operation](#operation) &nbsp;·&nbsp; [Modules](#modules) &nbsp;·&nbsp; [Verification](#verification) &nbsp;·&nbsp; [Results](#results) &nbsp;·&nbsp; [Demo](#demo) &nbsp;·&nbsp; [Getting started](#getting-started) &nbsp;·&nbsp; [Team](#team)
 
 </div>
 
@@ -155,9 +155,22 @@ System tests: T1 read miss, T2 read hit, T3 write hit and dirty bit, T4 dirty ev
 
 Details: [`docs/results/traffic-comparison.md`](docs/results/traffic-comparison.md).
 
+## Demo
+
+`./scripts/demo.sh` replays seven accesses in both write modes and prints, for each access, the tag, line, hit or miss, cycle count, controller path and running memory traffic. It then shows the final cache contents and a bar chart of the traffic comparison.
+
+```
+ #  Operation                  Tag Line  Result        Cycles  Path through the controller                 Mem R/W
+ 4  WRITE addr   1 = 0xAAAA      0    1  HIT                1  COMPARE                                       3 / 0
+ 6  READ  addr   9               1    1  MISS + evict      12  COMPARE > WRITE_BACK > ALLOCATE > COMPARE     4 / 1
+ 7  READ  addr   1               0    1  MISS               7  COMPARE > ALLOCATE > COMPARE                  5 / 1
+```
+
+Addresses 1 and 9 share line 1. Step 4 writes line 1 in the cache only and marks it dirty. Step 6 evicts it, saving the old word to memory before the refill, and step 7 reads the written value back.
+
 ## Getting started
 
-Requires [Icarus Verilog](https://steveicarus.github.io/iverilog/) (`brew install icarus-verilog` on macOS, `sudo apt install iverilog` on Debian or Ubuntu; Git Bash on Windows).
+Requires [Icarus Verilog](https://steveicarus.github.io/iverilog/) (`brew install icarus-verilog` on macOS, `sudo apt install iverilog` on Debian or Ubuntu; Git Bash on Windows). The demo also needs Python 3.
 
 ```bash
 git clone https://github.com/Abhayanthk/writeback-cache-verilog.git
@@ -173,6 +186,7 @@ chmod +x scripts/run.sh
 | `./scripts/run.sh storage`, `hit`, `memory`, `controller` | one unit test |
 | `./scripts/run.sh system` | the system test in both modes |
 | `./scripts/run.sh traffic` | the traffic comparison |
+| `./scripts/demo.sh` | the readable demo |
 
 Waveforms are written to `build/*.vcd` and open in any VCD viewer, for example [Surfer](https://surfer-project.org/).
 
@@ -188,7 +202,10 @@ rtl/
 tb/
   unit/          unit tests
   system/        system test and traffic comparison
-scripts/         run.sh
+scripts/
+  run.sh         test runner
+  demo.sh        readable demo
+  demo/          demo script and its testbench
 docs/
   diagrams/      FSM diagram
   results/       waveforms and the traffic comparison
