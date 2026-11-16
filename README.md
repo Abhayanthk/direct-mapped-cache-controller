@@ -1,23 +1,18 @@
+<div align="center">
+
 # Write-Back Cache in Verilog
 
-![Language](https://img.shields.io/badge/language-Verilog-blue)
-![Simulator](https://img.shields.io/badge/simulator-Icarus%20Verilog-green)
-![Tests](https://img.shields.io/badge/tests-5%20suites%20passing-brightgreen)
+**A direct-mapped write-back cache with a switchable write-through mode,<br>written in Verilog and verified in simulation.**
 
-A direct-mapped **write-back cache** with a switchable **write-through** mode, written in Verilog and verified in simulation. The project measures how much main-memory traffic write-back saves compared with write-through.
+[![Language: Verilog](https://img.shields.io/badge/language-Verilog-1f6feb?style=flat-square)](rtl) [![Simulator: Icarus Verilog](https://img.shields.io/badge/simulator-Icarus%20Verilog-0e8a8a?style=flat-square)](https://steveicarus.github.io/iverilog/) [![Tests: 5 suites passing](https://img.shields.io/badge/tests-5%20suites%20passing-2ea44f?style=flat-square)](#verification) [![Result: W1 memory writes 20 to 1](https://img.shields.io/badge/W1%20memory%20writes-20%20%E2%86%92%201-d9730d?style=flat-square)](#results)
 
-## Contents
+<br>
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Operation](#operation)
-- [Modules](#modules)
-- [Verification](#verification)
-- [Results](#results)
-- [Getting started](#getting-started)
-- [Repository structure](#repository-structure)
-- [Limitations](#limitations)
-- [Team](#team)
+[Overview](#overview) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Operation](#operation) &nbsp;·&nbsp; [Modules](#modules) &nbsp;·&nbsp; [Verification](#verification) &nbsp;·&nbsp; [Results](#results) &nbsp;·&nbsp; [Getting started](#getting-started) &nbsp;·&nbsp; [Team](#team)
+
+</div>
+
+---
 
 ## Overview
 
