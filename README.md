@@ -16,7 +16,7 @@
 
 ## Overview
 
-Direct-mapped, 8-line cache with write-back and write-through modes, a controller FSM, a slow main-memory model and traffic counters. The design is verified by unit tests, a two-mode system test and a four-workload traffic comparison.
+This project implements an 8-line, direct-mapped cache in Verilog. The cache sits between a CPU testbench and a slow main-memory model, and handles writes with either a write-back or a write-through policy, selected by an input signal. A controller state machine manages hits, evictions and refills, and counters record the memory reads and writes. The design is verified with a unit test for each module, a system test that runs in both write modes, and a traffic comparison on four workloads.
 
 | Policy | Write hit | Main memory updated |
 | --- | --- | --- |
