@@ -1,0 +1,20 @@
+README.md
+  s_b7ce489b4f75d3::t_90d139b1d933b3 11,23-30
+  s_b7ce489b4f75d3::t_d0d51fcf59cdc8 31,278
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6cf1163fdc29adf5b3ed44d3a60c67ac9d6ae90c",
+  "prompts": {},
+  "sessions": {
+    "s_b7ce489b4f75d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "86c30b6f-622b-4aae-9eb6-d184dd3bece1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Aryan Patel <aryanpatel6215@gmail.com>"
+    }
+  }
+}
