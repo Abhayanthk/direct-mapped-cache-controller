@@ -8,7 +8,7 @@
 
 <br>
 
-[Overview](#overview) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Operation](#operation) &nbsp;·&nbsp; [Modules](#modules) &nbsp;·&nbsp; [Verification](#verification) &nbsp;·&nbsp; [Hit/miss analysis](#hitmiss-analysis) &nbsp;·&nbsp; [Synthesis](#synthesis) &nbsp;·&nbsp; [Demo](#demo) &nbsp;·&nbsp; [Video](https://drive.google.com/drive/folders/1cAgpLGc0a6jVRFi5BkJcIOX9G1jo16D8) &nbsp;·&nbsp; [Getting started](#getting-started) &nbsp;·&nbsp; [Team](#team)
+[Overview](#overview) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Operation](#operation) &nbsp;·&nbsp; [Modules](#modules) &nbsp;·&nbsp; [Verification](#verification) &nbsp;·&nbsp; [Hit/miss analysis](#hitmiss-analysis) &nbsp;·&nbsp; [Synthesis](#synthesis) &nbsp;·&nbsp; [Demo](#demo) &nbsp;·&nbsp; [Video](https://drive.google.com/drive/folders/1cAgpLGc0a6jVRFi5BkJcIOX9G1jo16D8) &nbsp;·&nbsp; [Slides](docs/presentation/direct-mapped-cache-controller.pdf) &nbsp;·&nbsp; [Live demos](#live-demos) &nbsp;·&nbsp; [Getting started](#getting-started) &nbsp;·&nbsp; [Team](#team)
 
 </div>
 
@@ -19,6 +19,15 @@
 This project implements a direct-mapped cache controller in Verilog (Project 6, Modern Computer Architecture). An 8-line cache with 4-word (16-byte) blocks sits between a CPU testbench and a slow main-memory model. The address is split into tag, index and offset, a tag comparator decides hit or miss, and a controller state machine serves hits and moves whole blocks on misses. Hardware counters record hits, misses and memory traffic. Sequential, repeated, random and conflicting access traces measure the hit rate, miss rate and AMAT, and the design is synthesized for a Lattice iCE40 FPGA. Writes use a write-back policy, with a write-through mode selected by an input signal for comparison.
 
 **Video explanation:** [watch the project walkthrough](https://drive.google.com/drive/folders/1cAgpLGc0a6jVRFi5BkJcIOX9G1jo16D8) (Google Drive).
+
+**Slides:** [`docs/presentation/direct-mapped-cache-controller.pdf`](docs/presentation/direct-mapped-cache-controller.pdf) (7 slides: intro, demo, cache vs no cache, address split, request flow, FSM, results).
+
+### Live demos
+
+Interactive pages shown in the presentation:
+
+- [Live simulator](https://claude.ai/artifact/TErJefZKEqZKNnR2bx8UQU): address decoder, request player, trace runner and write-policy race.
+- [Access patterns, read by read](https://claude.ai/artifact/KeuJn3pzMwmJ6L6RQCF6Kg): sequential, repeated, random and conflict traces, one read at a time.
 
 | Policy | Write hit | Main memory updated |
 | --- | --- | --- |
@@ -266,6 +275,7 @@ scripts/
   demo/          demo script and its testbench
 docs/
   diagrams/      FSM diagram (fsm.svg source, fsm.png), memory and cache layout, address split, request flow
+  presentation/  presentation slides (PDF)
   results/       waveforms, hit/miss report, synthesis, traffic comparison
 ```
 
