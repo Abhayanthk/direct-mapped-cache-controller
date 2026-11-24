@@ -26,7 +26,7 @@ This project implements a direct-mapped cache controller in Verilog (Project 6, 
 
 Interactive pages shown in the presentation:
 
-- [Live simulator](https://claude.ai/artifact/TErJefZKEqZKNnR2bx8UQU): address decoder, request player, trace runner and write-policy race.
+- [Live simulator](https://claude.ai/artifact/TCi3FRQm7oqNrGprWGt6Mh): address decoder, request player, trace runner and write-policy race.
 - [Access patterns, read by read](https://claude.ai/artifact/KeuJn3pzMwmJ6L6RQCF6Kg): sequential, repeated, random and conflict traces, one read at a time.
 
 | Policy | Write hit | Main memory updated |
